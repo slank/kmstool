@@ -1,12 +1,12 @@
-import sys
-import clip
+'''A tool for encrypting and decrypting data with the AWS KMS'''
+
+import os
+from argparse import ArgumentParser
 from .kms import get_client
 from .file import (
     store_file,
     retrieve_file,
 )
-
-app = clip.App()
 
 
 def parse_kv(kv_string):
@@ -16,43 +16,49 @@ def parse_kv(kv_string):
         values[pair[0]] = pair[1]
     return values
 
-standard_args = ['source_path', 'dest_path', '--profile', '--region', '-c']
 
-
-@app.main(description='A tool for encrypting and decrypting data with the AWS KMS')
-@clip.arg('source_path', inherit_only=True)
-@clip.arg('dest_path', inherit_only=True)
-@clip.opt('--profile', help='AWS client profile name', inherit_only=True)
-@clip.opt('--region', help='AWS client region name', inherit_only=True)
-@clip.opt('-c', '--encryption-context', help='key=value,key=value', inherit_only=True)
-def kmstool():
-    pass
-
-
-@kmstool.subcommand(description='Store KMS-encrypted data', inherits=standard_args)
-@clip.arg('key_id', required=True)
-def store(key_id, encryption_context, source_path, dest_path, profile, region):
-    kms_client = get_client(profile=profile, region=region)
+def store(args):
+    kms_client = get_client(profile=args.profile, region=args.region)
     context = None
-    if encryption_context:
-        context = parse_kv(encryption_context)
-    store_file(kms_client, key_id, source_path, dest_path, context)
+    if args.encryption_context:
+        context = parse_kv(args.encryption_context)
+    store_file(kms_client, args.key_id, args.source_path, args.dest_path, context)
 
 
-@kmstool.subcommand(description='Retrieve KMS-encrypted data', inherits=standard_args)
-def retrieve(encryption_context, source_path, dest_path, profile, region):
-    kms_client = get_client(profile=profile, region=region)
+def retrieve(args):
+    kms_client = get_client(profile=args.profile, region=args.region)
     context = None
-    if encryption_context:
-        context = parse_kv(encryption_context)
-    retrieve_file(kms_client, source_path, dest_path, context)
+    if args.encryption_context:
+        context = parse_kv(args.encryption_context)
+    retrieve_file(kms_client, args.source_path, args.dest_path, context)
 
 
 def cli():
-    try:
-        app.run(sys.argv[1:] or '-h')
-    except clip.ClipExit:
-        pass
+    common_args = ArgumentParser(add_help=False, description=__doc__)
+    common_args.add_argument('--profile', help='AWS client profile')
+    common_args.add_argument('--region', help='AWS region')
+    common_args.add_argument('-c', '--encryption-context',
+                             help='key=val,key=val')
+    common_args.add_argument('source_path')
+    common_args.add_argument('dest_path')
+
+    ap = ArgumentParser()
+    sp = ap.add_subparsers()
+
+    store_ap = sp.add_parser('store', help='Store KMS-encrypted data',
+                             parents=(common_args,))
+    store_ap.add_argument('key_id')
+    store_ap.set_defaults(func=store)
+
+    retr_ap = sp.add_parser('retrieve', help='Retrieve KMS-encrypted data',
+                            parents=(common_args,))
+    retr_ap.set_defaults(func=retrieve)
+
+    args = ap.parse_args()
+    if not os.path.exists(args.source_path):
+        ap.exit(1, 'File not found: {}'.format(args.source_path))
+
+    args.func(args)
 
 if __name__ == '__main__':
     cli()

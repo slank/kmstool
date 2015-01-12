@@ -5,7 +5,6 @@ kmstool helps you encrypt data using the Amazon Key Management Service in AWS.
 ## Installing
 
 ```
-pip install -r requirements.txt # for clip.py, which currently has no package
 pip install .
 ```
 

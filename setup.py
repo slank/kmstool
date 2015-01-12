@@ -1,4 +1,5 @@
 import os
+from kmstool import VERSION
 from setuptools import setup
 
 
@@ -11,7 +12,7 @@ def read(fname):
 
 setup(
     name="kmstool",
-    version="0.1",
+    version=VERSION,
     author="Matthew Wedgwood",
     author_email="mw@rmn.com",
     description=("A tool for storing and retrieving encrypted data using the "
@@ -24,7 +25,6 @@ setup(
     install_requires=[
         'botocore>=0.80.0',
         'pycrypto>=2.6.1',
-        'clip.py>=0.2.0',
     ],
     entry_points={
         'console_scripts': [
