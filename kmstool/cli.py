@@ -56,7 +56,9 @@ def cli():
 
     args = ap.parse_args()
     if not os.path.exists(args.source_path):
-        ap.exit(1, 'File not found: {}'.format(args.source_path))
+        ap.exit(1, 'File not found: {}\n'.format(args.source_path))
+    if os.path.isdir(args.source_path):
+        ap.exit(1, 'Cannot yet operate on directories\n')
 
     args.func(args)
 
