@@ -3,10 +3,7 @@
 import os
 from argparse import ArgumentParser
 from .kms import get_client
-from .file import (
-    store_file,
-    retrieve_file,
-)
+from . import files
 
 
 def parse_kv(kv_string):
@@ -17,20 +14,21 @@ def parse_kv(kv_string):
     return values
 
 
-def store(args):
+def pack(args):
     kms_client = get_client(profile=args.profile, region=args.region)
     context = None
     if args.encryption_context:
         context = parse_kv(args.encryption_context)
-    store_file(kms_client, args.key_id, args.source_path, args.dest_path, context)
+    files.pack(kms_client, args.key_id,
+               args.source_path, args.source_path + '.kt', context)
 
 
-def retrieve(args):
+def unpack(args):
     kms_client = get_client(profile=args.profile, region=args.region)
     context = None
     if args.encryption_context:
         context = parse_kv(args.encryption_context)
-    retrieve_file(kms_client, args.source_path, args.dest_path, context)
+    files.unpack(kms_client, args.source_path, '.', context)
 
 
 def cli():
@@ -39,26 +37,26 @@ def cli():
     common_args.add_argument('--region', help='AWS region')
     common_args.add_argument('-c', '--encryption-context',
                              help='key=val,key=val')
-    common_args.add_argument('source_path')
-    common_args.add_argument('dest_path')
 
     ap = ArgumentParser()
     sp = ap.add_subparsers()
 
-    store_ap = sp.add_parser('store', help='Store KMS-encrypted data',
-                             parents=(common_args,))
-    store_ap.add_argument('key_id')
-    store_ap.set_defaults(func=store)
-
-    retr_ap = sp.add_parser('retrieve', help='Retrieve KMS-encrypted data',
+    pack_ap = sp.add_parser('pack', help='Store KMS-encrypted data',
                             parents=(common_args,))
-    retr_ap.set_defaults(func=retrieve)
+    pack_ap.add_argument('key_id')
+    pack_ap.add_argument('source_path')
+    pack_ap.set_defaults(func=pack)
+
+    unpack_ap = sp.add_parser('unpack', help='Retrieve KMS-encrypted data',
+                              parents=(common_args,))
+    unpack_ap.add_argument('source_path')
+    unpack_ap.set_defaults(func=unpack)
 
     args = ap.parse_args()
     if not os.path.exists(args.source_path):
         ap.exit(1, 'File not found: {}\n'.format(args.source_path))
-    if os.path.isdir(args.source_path):
-        ap.exit(1, 'Cannot yet operate on directories\n')
+    if args.source_path.endswith("/"):
+        args.source_path = args.source_path[:-1]
 
     args.func(args)
 
