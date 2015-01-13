@@ -14,12 +14,12 @@ setup(
     name="kmstool",
     version=VERSION,
     author="Matthew Wedgwood",
-    author_email="mw@rmn.com",
+    author_email="mwedgwood@gmail.com",
     description=("A tool for storing and retrieving encrypted data using the "
-                 "Amazon Key Management Service"),
+                 "AWS Key Management Service"),
     license="MIT",
-    keywords="amazon aws kms encryption key management",
-    url = "http://github.com/RetailMeNot/kmstool",
+    keywords=["amazon", "aws", "kms", "encryption", "key", "management"],
+    url = "http://github.com/slank/kmstool",
     packages=['kmstool'],
     long_description=read('README.md'),
     install_requires=[
