@@ -10,27 +10,27 @@ pip install .
 
 ## Usage
 
-kmstool has two modes: store and retrieve.
+kmstool has two modes: pack and unpack
 
 ### store
 
 ```
-kmstool store <key_id> <source> <dest>
+kmstool pack <key_id> <source>
 ```
 
 This command takes a KMS key ID, produces a data key, and uses that key to
 encrypt the file <source>. An encrypted copy of the data key is stored, along
-with the encrypted file, at <dest>.
+with the encrypted files, in the current directory.
 
 ### retrieve
 
 ```
-kmstool retrieve <source> <dest>
+kmstool retrieve <source>
 ```
 
 This command reads the contents of <source> passing the encrypted data key to
 KMS, and using the resulting plaintext key to decrypt the original data. The
-result is saved to <dest>.
+files are extracted to the current directory.
 
 ### Additional Options
 
@@ -56,8 +56,8 @@ context must be passed when retrieving them.
 
 ## Internals
 
-The output of `kmstool store` is a gzipped GNU tar file containing the
-KMS-encrypted data key plus an encrypted copy of the source data. The
+The output of `kmstool pack` is a gzipped GNU tar file containing the
+KMS-encrypted data key plus an encrypted tar.gz of the source data. The
 encrypted data is stored as follows (numbers are byte offsets).
 
 ```
