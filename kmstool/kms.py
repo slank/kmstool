@@ -1,7 +1,12 @@
 import botocore.session
+from botocore.exceptions import ClientError
 from urllib2 import urlopen, URLError
 
 AWS_MD_AZ_URL = 'http://169.254.169.254/latest/meta-data/placement/availability-zone'
+
+
+class EncryptionError(Exception):
+    pass
 
 
 def discover_region():
@@ -55,4 +60,19 @@ def decrypt_data(client, ciphertext, context=None):
     if context:
         args['EncryptionContext'] = context
 
-    return client.decrypt(**args)['Plaintext']
+    try:
+        return client.decrypt(**args)['Plaintext']
+    except ClientError as e:
+        raise EncryptionError('Encryption failed: ' + str(e))
+
+
+def alias_to_id(client, key_alias):
+    '''
+    Look up a key ID from a key alias.
+    '''
+    response = client.list_aliases()
+    if response and 'Aliases' in response:
+        for alias in response['Aliases']:
+            if alias['AliasName'] == key_alias:
+                return alias.get('TargetKeyId', None)
+    return None

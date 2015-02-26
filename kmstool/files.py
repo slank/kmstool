@@ -5,6 +5,7 @@ import tarfile
 from .kms import (
     create_data_key,
     decrypt_data,
+    alias_to_id,
 )
 from tempfile import mkdtemp
 from shutil import rmtree
@@ -81,7 +82,11 @@ class WorkContext(object):
             archive.close()
 
 
-def pack(kms_client, key_id, input_path, output_path, context=None, chunksize=CHUNKSIZE):
+def pack(kms_client, key, input_path, output_path, context=None, chunksize=CHUNKSIZE):
+    if key.startswith('alias/'):
+        key_id = alias_to_id(kms_client, key)
+    else:
+        key_id = key
     key, enc_key = create_data_key(kms_client, key_id, context=context)
 
     archive = tarfile.open(output_path, mode='w:gz')

@@ -1,8 +1,12 @@
 '''A tool for encrypting and decrypting data with the AWS KMS'''
-
+from __future__ import print_function
+import sys
 import os
 from argparse import ArgumentParser
-from .kms import get_client
+from .kms import (
+    get_client,
+    EncryptionError,
+)
 from . import files
 
 
@@ -19,7 +23,7 @@ def pack(args):
     context = None
     if args.encryption_context:
         context = parse_kv(args.encryption_context)
-    files.pack(kms_client, args.key_id,
+    files.pack(kms_client, args.key,
                args.source_path, args.source_path + '.kt', context)
 
 
@@ -28,7 +32,11 @@ def unpack(args):
     context = None
     if args.encryption_context:
         context = parse_kv(args.encryption_context)
-    files.unpack(kms_client, args.source_path, '.', context)
+    try:
+        files.unpack(kms_client, args.source_path, '.', context)
+    except EncryptionError as e:
+        print(e, file=sys.stderr)
+        exit(1)
 
 
 def cli():
@@ -43,7 +51,9 @@ def cli():
 
     pack_ap = sp.add_parser('pack', help='Store KMS-encrypted data',
                             parents=(common_args,))
-    pack_ap.add_argument('key_id')
+    pack_ap.add_argument('key',
+                         help='They master key to use. Pass a key ID or '
+                         'alias/<alias-name>.')
     pack_ap.add_argument('source_path')
     pack_ap.set_defaults(func=pack)
 
