@@ -1,7 +1,8 @@
-FROM gliderlabs/alpine:latest
+FROM alpine:latest
 
 ADD . /code
-RUN apk-install \
+RUN apk update \
+    && apk add \
         python \
         py-pip \
         python-dev \
@@ -13,4 +14,5 @@ RUN apk-install \
         python-dev \
         gcc \
         libc-dev \
-        libgcc
+        libgcc \
+    && rm -rf /var/cache/apk/*
