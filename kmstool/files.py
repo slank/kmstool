@@ -9,7 +9,9 @@ from .kms import (
 )
 from tempfile import mkdtemp
 from shutil import rmtree
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from six import int2byte
 
 CHUNKSIZE = 64 * 1024
 ENCKEY_NAME = 'kmstool_key.enc'
@@ -38,8 +40,10 @@ class WorkContext(object):
         archive.add(source_path, arcname=os.path.basename(source_path))
         archive.close()
 
-        iv = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
-        encryptor = AES.new(key, AES.MODE_CBC, iv)
+        iv = b''.join(int2byte(random.randint(0, 0xFF)) for i in range(16))
+        backend = default_backend()
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+        encryptor = cipher.encryptor()
         origsize = os.path.getsize(self.payload)
 
         with open(self.payload, 'rb') as infile:
@@ -47,20 +51,23 @@ class WorkContext(object):
                 outfile.write(iv)
 
                 # store the file size with the encrypted data
-                outfile.write(encryptor.encrypt(struct.pack('<QQ', origsize, 0)))
+                outfile.write(encryptor.update(struct.pack('<QQ', origsize, 0)))
                 while True:
                     chunk = infile.read(chunksize)
                     if len(chunk) == 0:
                         break
                     elif len(chunk) % 16 != 0:
-                        chunk += ' ' * (16 - len(chunk) % 16)
+                        chunk += b' ' * (16 - len(chunk) % 16)
 
-                    outfile.write(encryptor.encrypt(chunk))
+                    outfile.write(encryptor.update(chunk))
+                outfile.write(encryptor.finalize())
 
     def decrypt_payload(self, key, dest_path, chunksize=CHUNKSIZE):
         with open(self.enc_payload, 'rb') as infile:
             iv = infile.read(16)
-            decryptor = AES.new(key, AES.MODE_CBC, iv)
+            backend = default_backend()
+            cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+            decryptor = cipher.decryptor()
 
             origsize = 0
             with open(self.payload, 'wb') as outfile:
@@ -68,13 +75,14 @@ class WorkContext(object):
                     chunk = infile.read(chunksize)
                     if len(chunk) == 0:
                         break
-                    plaintext = decryptor.decrypt(chunk)
+                    plaintext = decryptor.update(chunk)
                     if origsize:
                         outfile.write(plaintext)
                     else:
                         origsize, pad = struct.unpack('<QQ', plaintext[0:16])
                         outfile.write(plaintext[16:])
 
+                outfile.write(decryptor.finalize())
                 outfile.truncate(origsize)
 
             archive = tarfile.open(self.payload)
@@ -92,7 +100,7 @@ def pack(kms_client, key, input_path, output_path, context=None, chunksize=CHUNK
     archive = tarfile.open(output_path, mode='w:gz')
 
     with WorkContext() as c:
-        with open(c.enc_keyfile, 'w') as f:
+        with open(c.enc_keyfile, 'wb') as f:
             f.write(enc_key)
         c.encrypt_payload(key, input_path, chunksize)
         archive.add(c.enc_keyfile, arcname=ENCKEY_NAME)
@@ -111,6 +119,6 @@ def unpack(kms_client, input_path, output_path, context=None,
     with WorkContext() as c:
         archive.extract(ENCKEY_NAME, c.tmpdir)
         archive.extract(PAYLOAD_NAME, c.tmpdir)
-        with open(c.enc_keyfile) as keyfile:
+        with open(c.enc_keyfile, 'rb') as keyfile:
             key = decrypt_data(kms_client, keyfile.read(), context)
         c.decrypt_payload(key, output_path, chunksize)

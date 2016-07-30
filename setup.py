@@ -24,7 +24,7 @@ setup(
     long_description=read('README.md'),
     install_requires=[
         'botocore>=0.80.0',
-        'pycrypto>=2.6.1',
+        'cryptography',
     ],
     entry_points={
         'console_scripts': [

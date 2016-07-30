@@ -66,3 +66,12 @@ encrypted data is stored as follows (numbers are byte offsets).
      0-15 Original filesize
      16-N Original data
 ```
+
+## Cryptography install on Mac
+
+If you have issues with installing `cryptography` library on Mac out of the
+box, make sure that you've upgraded your pip
+
+```
+pip install -U pip
+```
