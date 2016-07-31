@@ -1,6 +1,9 @@
 import botocore.session
 from botocore.exceptions import ClientError
-from urllib2 import urlopen, URLError
+try:
+    from urllib2 import urlopen, URLError
+except ImportError:
+    from urllib.request import urlopen, URLError
 
 AWS_MD_AZ_URL = 'http://169.254.169.254/latest/meta-data/placement/availability-zone'
 
